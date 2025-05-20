@@ -1,0 +1,27 @@
+:root {
+    --sh1: rgba(0, 0, 0, 0.9);
+    --sh2: rgba(0, 0, 0, 0.5);
+    --sh3: rgba(0, 0, 0, 0.1);
+    --p: #6b04e1;
+    --ph: #9245eacb;
+    --ph1: #9245ea69;
+    --b: #0f4192;
+    --bh: #4371bbc9;
+    --t: #ffffffea;
+    --th: #ffffff86;
+    --t2: #adadadea;
+    --t3: #292929ea;
+    --t4: #141414ea;
+    --r: #c24545;
+    --grad:linear-gradient(45deg,rgb(0, 0, 0),rgb(45, 24, 56));
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html {
+    overflow-x: hidden;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:black;
+}

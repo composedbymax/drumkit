@@ -1,0 +1,28 @@
+body, html { height: 100vh; overflow: hidden; font-family: sans-serif; background: var(--grad);; color: var(--t); }
+.app { display: flex; flex-direction: column; height: 100%; }
+header { padding: 16px; background: var(--sh2); display: flex; justify-content: space-between; align-items: center; }
+.ctrl { display: flex; gap: 12px; align-items: center; }
+select, button, input { background: var(--t3); color: var(--t); border: 1px solid var(--t); padding: 4px 8px; border-radius: 4px; font-size: 14px; }
+button { cursor: pointer; transition: all 0.2s; }
+button:hover { background: var(--sh1); }
+button.active { background: var(--p); color: var(--1); }
+.main {flex: 1; display: flex; padding: 16px; justify-content: center; align-items: center; overflow: auto;}
+table {border-collapse: collapse; width: 100%; max-width: 1200px;}
+td { width: 32px; height: 32px; border: 1px solid var(--t2); cursor: pointer; }
+td.active { background: var(--p); }
+td.playing { background: var(--t3); }
+tr td:nth-child(4n+1) { border-left: 2px solid var(--t); }
+.footer { background: var(--sh2); padding: 12px; display: flex; justify-content: space-between; }
+.inst-btns { display: flex; gap: 8px; }
+.inst-btn { padding: 8px 12px; cursor: pointer; border-radius: 4px; transition: background 0.2s; font-weight:800;}
+.inst-btn:hover { background: var(--ph); color:var(--sh1)}
+.inst-btn.sel { background: var(--p); color: #000; }
+.panel { position: absolute; bottom: 0; left: 0; width: 100%; height: 0; background: var(--sh1); overflow: hidden; transition: height 0.3s ease; z-index: 10; }
+.panel.open { height: 40%; }
+.panel-header { padding: 20px; font-size: 1.2rem; border-bottom: 1px solid var(--t); display: flex; justify-content: space-between; }
+.panel-content { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.ctrl-group { display: flex; flex-direction: column; gap: 8px; }
+.ctrl-group label { display: flex; justify-content: space-between; align-items: center; }
+.ctrl-group input, .ctrl-group select { flex: 1; margin-left: 8px; }
+.close-btn { cursor: pointer; font-size: 1.2rem; }
+@media (max-width: 600px) {select, button, input {padding: 8px 8px; font-size: 10px; }}
