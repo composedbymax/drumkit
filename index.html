@@ -43,6 +43,7 @@
         <div style="display: flex; align-items: center; gap: 8px;">
           <label for="bpm">BPM:</label>
           <input type="number" id="bpm" min="60" max="200" value="120" style="width: 60px;">
+          <button id="tap-bpm">Tap</button>
         </div>
         <select id="genre">
           <option value="">Select Genre</option>
@@ -270,6 +271,23 @@
       params[inst] = {...instDefs[inst].defs};
     }
     const $ = id => document.getElementById(id);
+    const tapTimes = [];
+    function handleTap() {
+      const now = performance.now();
+      if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 2000) {
+        tapTimes.length = 0;
+      }
+      tapTimes.push(now);
+      if (tapTimes.length >= 2) {
+        const intervals = tapTimes
+          .slice(1)
+          .map((t, i) => (t - tapTimes[i]) / 1000);
+        const avgInterval = intervals.reduce((sum, x) => sum + x, 0) / intervals.length;
+        const bpm = Math.round(60 / avgInterval);
+        $('bpm').value = bpm;
+        s.tempo = bpm;
+      }
+    }
     function initGrid() {
       const grid = $('grid');
       grid.innerHTML = '';
@@ -340,7 +358,7 @@
         'Parameters': instDefs[inst].ctrls.filter(c => c.type === 'range')
       };
       for (const [name, ctrls] of Object.entries(groups)) {
-        if (ctrls.length === 0) continue;
+        if (!ctrls.length) continue;
         const group = document.createElement('div');
         group.className = 'ctrl-group';
         const header = document.createElement('h3');
@@ -356,7 +374,7 @@
               const option = document.createElement('option');
               option.value = opt;
               option.textContent = opt;
-              option.selected = params[inst][ctrl.key] === opt;
+              if (params[inst][ctrl.key] === opt) option.selected = true;
               input.appendChild(option);
             });
             input.onchange = () => params[inst][ctrl.key] = input.value;
@@ -417,11 +435,8 @@
         }
       }
       setTimeout(() => {
-        if (s.playing) {
-          schedule();
-        } else {
-          updatePlayhead(-1);
-        }
+        if (s.playing) schedule();
+        else updatePlayhead(-1);
       }, s.steps * interval * 1000);
     }
     function togglePlay() {
@@ -430,9 +445,8 @@
       const btn = $('play');
       btn.textContent = s.playing ? 'Stop' : 'Play';
       btn.classList.toggle('active', s.playing);
-      if (s.playing) {
-        schedule();
-      } else {
+      if (s.playing) schedule();
+      else {
         s.step = -1;
         updatePlayhead(-1);
       }
@@ -487,6 +501,7 @@
       $('save').onclick = savePattern;
       $('load').onclick = loadPattern;
       $('bpm').onchange = e => s.tempo = parseInt(e.target.value);
+      $('tap-bpm').onclick = handleTap;  // ← Tap BPM wiring
       document.addEventListener('keydown', e => {
         if (e.code === 'Space') {
           e.preventDefault();
