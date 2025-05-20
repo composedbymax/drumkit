@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Drumkit</title>
+  <title>Drum Machine</title>
   <style>
     :root { --accent: #ff4081; --bg: #1e1e1e; --fg: #eee; --panel: #2a2a2a; --border: #444; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html { height: 100vh; overflow: hidden; font-family: sans-serif; background: var(--bg); color: var(--fg); }
     .app { display: flex; flex-direction: column; height: 100%; }
     header { padding: 16px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; }
-    .controls { display: flex; gap: 12px; align-items: center; }
+    .ctrl { display: flex; gap: 12px; align-items: center; }
     select, button, input { background: #333; color: var(--fg); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; font-size: 14px; }
     button { cursor: pointer; transition: all 0.2s; }
     button:hover { background: #444; }
@@ -22,29 +22,29 @@
     td.playing { background: rgba(255, 255, 255, 0.3); }
     tr td:nth-child(4n+1) { border-left: 2px solid #666; }
     .footer { background: var(--panel); padding: 12px; display: flex; justify-content: space-between; }
-    .inst-buttons { display: flex; gap: 8px; }
+    .inst-btns { display: flex; gap: 8px; }
     .inst-btn { padding: 8px 12px; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
     .inst-btn:hover { background: #333; }
-    .inst-btn.selected { background: var(--accent); color: #000; }
+    .inst-btn.sel { background: var(--accent); color: #000; }
     .panel { position: absolute; bottom: 0; left: 0; width: 100%; height: 0; background: var(--panel); overflow: hidden; transition: height 0.3s ease; z-index: 10; }
     .panel.open { height: 40%; }
     .panel-header { padding: 12px; font-size: 1.2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
     .panel-content { padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .control-group { display: flex; flex-direction: column; gap: 8px; }
-    .control-group label { display: flex; justify-content: space-between; align-items: center; }
-    .control-group input, .control-group select { flex: 1; margin-left: 8px; }
+    .ctrl-group { display: flex; flex-direction: column; gap: 8px; }
+    .ctrl-group label { display: flex; justify-content: space-between; align-items: center; }
+    .ctrl-group input, .ctrl-group select { flex: 1; margin-left: 8px; }
     .close-btn { cursor: pointer; font-size: 1.2rem; }
   </style>
 </head>
 <body>
   <div class="app">
     <header>
-      <div class="controls">
+      <div class="ctrl">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <label for="tempoInput">BPM:</label>
-          <input type="number" id="tempoInput" min="60" max="200" value="120" style="width: 60px;">
+          <label for="bpm">BPM:</label>
+          <input type="number" id="bpm" min="60" max="200" value="120" style="width: 60px;">
         </div>
-        <select id="genreSelect">
+        <select id="genre">
           <option value="">Select Genre</option>
           <option>Rock</option>
           <option>4-on-the-Floor</option>
@@ -54,160 +54,160 @@
           <option>Disco</option>
           <option>House</option>
         </select>
-        <button id="playButton">Play</button>
-        <button id="clearButton">Clear</button>
-        <button id="saveButton">Save</button>
-        <button id="loadButton">Load</button>
+        <button id="play">Play</button>
+        <button id="clear">Clear</button>
+        <button id="save">Save</button>
+        <button id="load">Load</button>
       </div>
     </header>
     <div class="main">
-      <table id="drumGrid"></table>
+      <table id="grid"></table>
     </div>
     <div class="footer">
-      <div class="inst-buttons" id="instButtons"></div>
+      <div class="inst-btns" id="inst-btns"></div>
       <div class="transport-info">
-        <span id="currentBeat">-</span>
+        <span id="beat">-</span>
       </div>
     </div>
     <div id="panel" class="panel">
       <div class="panel-header">
-        <span id="panelTitle"></span>
-        <span id="closePanel" class="close-btn">✕</span>
+        <span id="panel-title"></span>
+        <span id="close-panel" class="close-btn">✕</span>
       </div>
-      <div id="panelContent" class="panel-content"></div>
+      <div id="panel-content" class="panel-content"></div>
     </div>
   </div>
   <script>
-    const state = {
-      audioCtx: null,
-      currentStep: -1,
-      instruments: ['kick', 'snare', 'hihat', 'tom', 'clap'],
+    const s = {
+      ctx: null,
+      step: -1,
+      insts: ['kick', 'snare', 'hihat', 'tom', 'clap'],
       steps: 16,
       tempo: 120,
-      isPlaying: false,
-      timerID: null,
-      pattern: {},
-      selectedInst: null
+      playing: false,
+      timer: null,
+      pat: {},
+      sel: null
     };
-    const instrumentDefs = {
+    const instDefs = {
       kick: {
         name: 'Kick',
-        controls: [
-          {label: 'Waveform', type: 'select', key: 'type', options: ['sine', 'square', 'triangle', 'sawtooth']},
-          {label: 'Start Freq', type: 'range', key: 'startF', min: 50, max: 400, step: 1},
-          {label: 'End Freq', type: 'range', key: 'endF', min: 0.001, max: 150, step: 0.1},
-          {label: 'Decay (s)', type: 'range', key: 'decay', min: 0.1, max: 1, step: 0.05}
+        ctrls: [
+          {lbl: 'Waveform', type: 'select', key: 'type', opts: ['sine', 'square', 'triangle', 'sawtooth']},
+          {lbl: 'Start Freq', type: 'range', key: 'startF', min: 50, max: 400, step: 1},
+          {lbl: 'End Freq', type: 'range', key: 'endF', min: 0.001, max: 150, step: 0.1},
+          {lbl: 'Decay (s)', type: 'range', key: 'decay', min: 0.1, max: 1, step: 0.05}
         ],
-        defaults: {type: 'sine', startF: 150, endF: 0.001, decay: 0.5},
+        defs: {type: 'sine', startF: 150, endF: 0.001, decay: 0.5},
         play: (t, p) => {
-          const osc = state.audioCtx.createOscillator();
-          const gain = state.audioCtx.createGain();
+          const osc = s.ctx.createOscillator();
+          const gain = s.ctx.createGain();
           osc.type = p.type;
           osc.frequency.setValueAtTime(p.startF, t);
           osc.frequency.exponentialRampToValueAtTime(p.endF, t + p.decay);
           gain.gain.setValueAtTime(1, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + p.decay);
-          osc.connect(gain).connect(state.audioCtx.destination);
+          osc.connect(gain).connect(s.ctx.destination);
           osc.start(t);
           osc.stop(t + p.decay);
         }
       },
       snare: {
         name: 'Snare',
-        controls: [
-          {label: 'Filter Freq', type: 'range', key: 'filterF', min: 200, max: 5000, step: 1},
-          {label: 'Decay (s)', type: 'range', key: 'decay', min: 0.05, max: 1, step: 0.05},
-          {label: 'Level', type: 'range', key: 'level', min: 0.1, max: 2, step: 0.1}
+        ctrls: [
+          {lbl: 'Filter Freq', type: 'range', key: 'filterF', min: 200, max: 5000, step: 1},
+          {lbl: 'Decay (s)', type: 'range', key: 'decay', min: 0.05, max: 1, step: 0.05},
+          {lbl: 'Level', type: 'range', key: 'level', min: 0.1, max: 2, step: 0.1}
         ],
-        defaults: {filterF: 1000, decay: 0.2, level: 1},
+        defs: {filterF: 1000, decay: 0.2, level: 1},
         play: (t, p) => {
-          const size = state.audioCtx.sampleRate * p.decay;
-          const buf = state.audioCtx.createBuffer(1, size, state.audioCtx.sampleRate);
+          const size = s.ctx.sampleRate * p.decay;
+          const buf = s.ctx.createBuffer(1, size, s.ctx.sampleRate);
           const data = buf.getChannelData(0);
           for(let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-          const noise = state.audioCtx.createBufferSource();
+          const noise = s.ctx.createBufferSource();
           noise.buffer = buf;
-          const filter = state.audioCtx.createBiquadFilter();
+          const filter = s.ctx.createBiquadFilter();
           filter.type = 'bandpass';
           filter.frequency.value = p.filterF;
-          const gain = state.audioCtx.createGain();
+          const gain = s.ctx.createGain();
           gain.gain.setValueAtTime(p.level, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + p.decay);
-          noise.connect(filter).connect(gain).connect(state.audioCtx.destination);
+          noise.connect(filter).connect(gain).connect(s.ctx.destination);
           noise.start(t);
           noise.stop(t + p.decay);
         }
       },
       hihat: {
         name: 'Hi-Hat',
-        controls: [
-          {label: 'Filter Freq', type: 'range', key: 'filterF', min: 1000, max: 12000, step: 1},
-          {label: 'Decay (s)', type: 'range', key: 'decay', min: 0.01, max: 0.5, step: 0.01},
-          {label: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
+        ctrls: [
+          {lbl: 'Filter Freq', type: 'range', key: 'filterF', min: 1000, max: 12000, step: 1},
+          {lbl: 'Decay (s)', type: 'range', key: 'decay', min: 0.01, max: 0.5, step: 0.01},
+          {lbl: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
         ],
-        defaults: {filterF: 7000, decay: 0.05, level: 0.5},
+        defs: {filterF: 7000, decay: 0.05, level: 0.5},
         play: (t, p) => {
-          const size = state.audioCtx.sampleRate * p.decay;
-          const buf = state.audioCtx.createBuffer(1, size, state.audioCtx.sampleRate);
+          const size = s.ctx.sampleRate * p.decay;
+          const buf = s.ctx.createBuffer(1, size, s.ctx.sampleRate);
           const data = buf.getChannelData(0);
           for(let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-          const noise = state.audioCtx.createBufferSource();
+          const noise = s.ctx.createBufferSource();
           noise.buffer = buf;
-          const filter = state.audioCtx.createBiquadFilter();
+          const filter = s.ctx.createBiquadFilter();
           filter.type = 'highpass';
           filter.frequency.value = p.filterF;
-          const gain = state.audioCtx.createGain();
+          const gain = s.ctx.createGain();
           gain.gain.setValueAtTime(p.level, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + p.decay);
-          noise.connect(filter).connect(gain).connect(state.audioCtx.destination);
+          noise.connect(filter).connect(gain).connect(s.ctx.destination);
           noise.start(t);
           noise.stop(t + p.decay);
         }
       },
       tom: {
         name: 'Tom',
-        controls: [
-          {label: 'Frequency', type: 'range', key: 'freq', min: 60, max: 300, step: 1},
-          {label: 'Decay (s)', type: 'range', key: 'decay', min: 0.1, max: 1, step: 0.05},
-          {label: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
+        ctrls: [
+          {lbl: 'Frequency', type: 'range', key: 'freq', min: 60, max: 300, step: 1},
+          {lbl: 'Decay (s)', type: 'range', key: 'decay', min: 0.1, max: 1, step: 0.05},
+          {lbl: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
         ],
-        defaults: {freq: 100, decay: 0.3, level: 0.8},
+        defs: {freq: 100, decay: 0.3, level: 0.8},
         play: (t, p) => {
-          const osc = state.audioCtx.createOscillator();
-          const gain = state.audioCtx.createGain();
+          const osc = s.ctx.createOscillator();
+          const gain = s.ctx.createGain();
           osc.type = 'sine';
           osc.frequency.value = p.freq;
           gain.gain.setValueAtTime(p.level, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + p.decay);
-          osc.connect(gain).connect(state.audioCtx.destination);
+          osc.connect(gain).connect(s.ctx.destination);
           osc.start(t);
           osc.stop(t + p.decay);
         }
       },
       clap: {
         name: 'Clap',
-        controls: [
-          {label: 'Filter Freq', type: 'range', key: 'filterF', min: 500, max: 5000, step: 1},
-          {label: 'Decay (s)', type: 'range', key: 'decay', min: 0.05, max: 0.5, step: 0.01},
-          {label: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
+        ctrls: [
+          {lbl: 'Filter Freq', type: 'range', key: 'filterF', min: 500, max: 5000, step: 1},
+          {lbl: 'Decay (s)', type: 'range', key: 'decay', min: 0.05, max: 0.5, step: 0.01},
+          {lbl: 'Level', type: 'range', key: 'level', min: 0.1, max: 1, step: 0.05}
         ],
-        defaults: {filterF: 1500, decay: 0.2, level: 0.8},
+        defs: {filterF: 1500, decay: 0.2, level: 0.8},
         play: (t, p) => {
           for (let i = 0; i < 4; i++) {
             const delay = i * 0.01;
-            const size = state.audioCtx.sampleRate * (p.decay / 4);
-            const buf = state.audioCtx.createBuffer(1, size, state.audioCtx.sampleRate);
+            const size = s.ctx.sampleRate * (p.decay / 4);
+            const buf = s.ctx.createBuffer(1, size, s.ctx.sampleRate);
             const data = buf.getChannelData(0);
             for(let j = 0; j < size; j++) data[j] = Math.random() * 2 - 1;
-            const noise = state.audioCtx.createBufferSource();
+            const noise = s.ctx.createBufferSource();
             noise.buffer = buf;
-            const filter = state.audioCtx.createBiquadFilter();
+            const filter = s.ctx.createBiquadFilter();
             filter.type = 'bandpass';
             filter.frequency.value = p.filterF;
-            const gain = state.audioCtx.createGain();
+            const gain = s.ctx.createGain();
             gain.gain.setValueAtTime(p.level * (i === 0 ? 1 : 0.7), t + delay);
             gain.gain.exponentialRampToValueAtTime(0.001, t + delay + p.decay/2);
-            noise.connect(filter).connect(gain).connect(state.audioCtx.destination);
+            noise.connect(filter).connect(gain).connect(s.ctx.destination);
             noise.start(t + delay);
             noise.stop(t + delay + p.decay/2);
           }
@@ -266,55 +266,54 @@
       }
     };
     const params = {};
-    for (const inst in instrumentDefs) {
-      params[inst] = {...instrumentDefs[inst].defaults};
+    for (const inst in instDefs) {
+      params[inst] = {...instDefs[inst].defs};
     }
+    const $ = id => document.getElementById(id);
     function initGrid() {
-      const grid = document.getElementById('drumGrid');
+      const grid = $('grid');
       grid.innerHTML = '';
-      state.instruments.forEach(inst => {
-        state.pattern[inst] = new Array(state.steps).fill(false);
-      });
-      state.instruments.forEach(inst => {
+      s.insts.forEach(inst => {
+        s.pat[inst] = new Array(s.steps).fill(false);
         const row = document.createElement('tr');
         row.dataset.inst = inst;
-        for (let i = 0; i < state.steps; i++) {
+        for (let i = 0; i < s.steps; i++) {
           const cell = document.createElement('td');
           cell.dataset.inst = inst;
           cell.dataset.step = i;
           cell.onclick = () => {
-            state.pattern[inst][i] = !state.pattern[inst][i];
-            cell.classList.toggle('active', state.pattern[inst][i]);
+            s.pat[inst][i] = !s.pat[inst][i];
+            cell.classList.toggle('active', s.pat[inst][i]);
           };
           row.appendChild(cell);
         }
         grid.appendChild(row);
       });
     }
-    function initInstrumentButtons() {
-      const container = document.getElementById('instButtons');
+    function initInstBtns() {
+      const container = $('inst-btns');
       container.innerHTML = '';
-      state.instruments.forEach(inst => {
+      s.insts.forEach(inst => {
         const btn = document.createElement('div');
         btn.className = 'inst-btn';
-        btn.textContent = instrumentDefs[inst].name;
+        btn.textContent = instDefs[inst].name;
         btn.dataset.inst = inst;
         btn.onclick = () => {
-          if (state.selectedInst) {
-            document.querySelector(`.inst-btn[data-inst="${state.selectedInst}"]`).classList.remove('selected');
+          if (s.sel) {
+            document.querySelector(`.inst-btn[data-inst="${s.sel}"]`).classList.remove('sel');
           }
-          state.selectedInst = inst;
-          btn.classList.add('selected');
+          s.sel = inst;
+          btn.classList.add('sel');
           openPanel(inst);
         };
         container.appendChild(btn);
       });
     }
     function updateGrid() {
-      document.querySelectorAll('#drumGrid td').forEach(cell => {
+      document.querySelectorAll('#grid td').forEach(cell => {
         const inst = cell.dataset.inst;
         const step = parseInt(cell.dataset.step);
-        cell.classList.toggle('active', state.pattern[inst][step]);
+        cell.classList.toggle('active', s.pat[inst][step]);
       });
     }
     function updatePlayhead(step) {
@@ -325,188 +324,169 @@
         document.querySelectorAll(`td[data-step="${step}"]`).forEach(cell => {
           cell.classList.add('playing');
         });
-        document.getElementById('currentBeat').textContent = `Beat: ${step + 1}`;
+        $('beat').textContent = `Beat: ${step + 1}`;
       } else {
-        document.getElementById('currentBeat').textContent = '-';
+        $('beat').textContent = '-';
       }
     }
     function openPanel(inst) {
-      const panel = document.getElementById('panel');
-      const panelTitle = document.getElementById('panelTitle');
-      const panelContent = document.getElementById('panelContent');
-      panelTitle.textContent = `${instrumentDefs[inst].name} Settings`;
-      panelContent.innerHTML = '';
-      const controls = instrumentDefs[inst].controls;
-      const groups = {};
-      controls.forEach(control => {
-        const groupName = control.type === 'select' ? 'Options' : 'Parameters';
-        if (!groups[groupName]) {
-          groups[groupName] = [];
-        }
-        groups[groupName].push(control);
-      });
-      for (const [groupName, controls] of Object.entries(groups)) {
+      const panel = $('panel');
+      const title = $('panel-title');
+      const content = $('panel-content');
+      title.textContent = `${instDefs[inst].name} Settings`;
+      content.innerHTML = '';
+      const groups = {
+        'Options': instDefs[inst].ctrls.filter(c => c.type === 'select'),
+        'Parameters': instDefs[inst].ctrls.filter(c => c.type === 'range')
+      };
+      for (const [name, ctrls] of Object.entries(groups)) {
+        if (ctrls.length === 0) continue;
         const group = document.createElement('div');
-        group.className = 'control-group';
+        group.className = 'ctrl-group';
         const header = document.createElement('h3');
-        header.textContent = groupName;
+        header.textContent = name;
         group.appendChild(header);
-        controls.forEach(control => {
+        ctrls.forEach(ctrl => {
           const label = document.createElement('label');
-          label.textContent = control.label;
+          label.textContent = ctrl.lbl;
           let input;
-          if (control.type === 'select') {
+          if (ctrl.type === 'select') {
             input = document.createElement('select');
-            control.options.forEach(option => {
-              const opt = document.createElement('option');
-              opt.value = option;
-              opt.textContent = option;
-              if (params[inst][control.key] === option) {
-                opt.selected = true;
-              }
-              input.appendChild(opt);
+            ctrl.opts.forEach(opt => {
+              const option = document.createElement('option');
+              option.value = opt;
+              option.textContent = opt;
+              option.selected = params[inst][ctrl.key] === opt;
+              input.appendChild(option);
             });
+            input.onchange = () => params[inst][ctrl.key] = input.value;
           } else {
             input = document.createElement('input');
             input.type = 'range';
-            input.min = control.min;
-            input.max = control.max;
-            input.step = control.step;
-            input.value = params[inst][control.key];
-            const valueDisplay = document.createElement('span');
-            valueDisplay.textContent = params[inst][control.key];
+            input.min = ctrl.min;
+            input.max = ctrl.max;
+            input.step = ctrl.step;
+            input.value = params[inst][ctrl.key];
+            const display = document.createElement('span');
+            display.textContent = params[inst][ctrl.key];
             input.oninput = () => {
-              params[inst][control.key] = control.type === 'range' ? parseFloat(input.value) : input.value;
-              valueDisplay.textContent = input.value;
+              params[inst][ctrl.key] = parseFloat(input.value);
+              display.textContent = input.value;
             };
-            label.appendChild(valueDisplay);
-          }
-          if (control.type === 'select') {
-            input.onchange = () => {
-              params[inst][control.key] = input.value;
-            };
+            label.appendChild(display);
           }
           label.appendChild(input);
           group.appendChild(label);
         });
-        const testButton = document.createElement('button');
-        testButton.textContent = 'Test Sound';
-        testButton.onclick = () => {
-          if (!state.audioCtx) {
-            initAudio();
-          }
-          instrumentDefs[inst].play(state.audioCtx.currentTime, params[inst]);
+        const testBtn = document.createElement('button');
+        testBtn.textContent = 'Test Sound';
+        testBtn.onclick = () => {
+          initAudio();
+          instDefs[inst].play(s.ctx.currentTime, params[inst]);
         };
-        group.appendChild(testButton);
-        const resetButton = document.createElement('button');
-        resetButton.textContent = 'Reset to Default';
-        resetButton.onclick = () => {
-          params[inst] = {...instrumentDefs[inst].defaults};
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Reset to Default';
+        resetBtn.onclick = () => {
+          params[inst] = {...instDefs[inst].defs};
           openPanel(inst);
         };
-        group.appendChild(resetButton);
-        panelContent.appendChild(group);
+        group.appendChild(testBtn);
+        group.appendChild(resetBtn);
+        content.appendChild(group);
       }
       panel.classList.add('open');
     }
     function initAudio() {
-      if (!state.audioCtx) {
-        state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!s.ctx) {
+        s.ctx = new (window.AudioContext || window.webkitAudioContext)();
       }
     }
     function schedule() {
-      const interval = (60 / state.tempo) / 4;
-      const now = state.audioCtx.currentTime;
-      for (let i = 0; i < state.steps; i++) {
+      const interval = (60 / s.tempo) / 4;
+      const now = s.ctx.currentTime;
+      for (let i = 0; i < s.steps; i++) {
         const time = now + i * interval;
         setTimeout(() => {
-          state.currentStep = i;
+          s.step = i;
           updatePlayhead(i);
         }, i * interval * 1000);
-        for (const inst of state.instruments) {
-          if (state.pattern[inst][i]) {
-            instrumentDefs[inst].play(time, params[inst]);
+        for (const inst of s.insts) {
+          if (s.pat[inst][i]) {
+            instDefs[inst].play(time, params[inst]);
           }
         }
       }
       setTimeout(() => {
-        if (state.isPlaying) {
+        if (s.playing) {
           schedule();
         } else {
           updatePlayhead(-1);
         }
-      }, state.steps * interval * 1000);
+      }, s.steps * interval * 1000);
     }
     function togglePlay() {
       initAudio();
-      state.isPlaying = !state.isPlaying;
-      const playBtn = document.getElementById('playButton');
-      playBtn.textContent = state.isPlaying ? 'Stop' : 'Play';
-      playBtn.classList.toggle('active', state.isPlaying);
-      if (state.isPlaying) {
+      s.playing = !s.playing;
+      const btn = $('play');
+      btn.textContent = s.playing ? 'Stop' : 'Play';
+      btn.classList.toggle('active', s.playing);
+      if (s.playing) {
         schedule();
       } else {
-        state.currentStep = -1;
+        s.step = -1;
         updatePlayhead(-1);
       }
     }
-    function loadPreset(presetName) {
-      if (presets[presetName]) {
-        for (const inst in presets[presetName]) {
-          state.pattern[inst] = presets[presetName][inst].map(v => v === 1);
+    function loadPreset(name) {
+      if (presets[name]) {
+        for (const inst in presets[name]) {
+          s.pat[inst] = presets[name][inst].map(v => v === 1);
         }
         updateGrid();
       }
     }
     function clearPattern() {
-      for (const inst in state.pattern) {
-        state.pattern[inst] = new Array(state.steps).fill(false);
+      for (const inst in s.pat) {
+        s.pat[inst] = new Array(s.steps).fill(false);
       }
       updateGrid();
     }
     function savePattern() {
       try {
-        const data = {
-          pattern: state.pattern,
+        localStorage.setItem('drumPattern', JSON.stringify({
+          pattern: s.pat,
           params: params
-        };
-        localStorage.setItem('drumPattern', JSON.stringify(data));
-        alert('Pattern saved successfully!');
+        }));
+        alert('Pattern saved!');
       } catch (e) {
-        alert('Error saving pattern: ' + e.message);
+        alert('Save error: ' + e.message);
       }
     }
     function loadPattern() {
       try {
         const data = JSON.parse(localStorage.getItem('drumPattern'));
         if (data) {
-          state.pattern = data.pattern;
+          s.pat = data.pattern;
           Object.assign(params, data.params);
           updateGrid();
-          alert('Pattern loaded successfully!');
+          alert('Pattern loaded!');
         } else {
           alert('No saved pattern found');
         }
       } catch (e) {
-        alert('Error loading pattern: ' + e.message);
+        alert('Load error: ' + e.message);
       }
     }
     function init() {
       initGrid();
-      initInstrumentButtons();
-      document.getElementById('genreSelect').onchange = e => {
-        loadPreset(e.target.value);
-      };
-      document.getElementById('closePanel').onclick = () => {
-        document.getElementById('panel').classList.remove('open');
-      };
-      document.getElementById('playButton').onclick = togglePlay;
-      document.getElementById('clearButton').onclick = clearPattern;
-      document.getElementById('saveButton').onclick = savePattern;
-      document.getElementById('loadButton').onclick = loadPattern;
-      document.getElementById('tempoInput').onchange = e => {
-        state.tempo = parseInt(e.target.value);
-      };
+      initInstBtns();
+      $('genre').onchange = e => loadPreset(e.target.value);
+      $('close-panel').onclick = () => $('panel').classList.remove('open');
+      $('play').onclick = togglePlay;
+      $('clear').onclick = clearPattern;
+      $('save').onclick = savePattern;
+      $('load').onclick = loadPattern;
+      $('bpm').onchange = e => s.tempo = parseInt(e.target.value);
       document.addEventListener('keydown', e => {
         if (e.code === 'Space') {
           e.preventDefault();
